@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>usermgr admin</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0f1117;
+    --bg2: #161820;
+    --bg3: #1e2028;
+    --border: #2a2d38;
+    --border2: #3a3d4a;
+    --text: #e8eaf0;
+    --text2: #8b8fa8;
+    --text3: #555870;
+    --accent: #5b8def;
+    --accent2: #3d6fd4;
+    --green: #3ecf8e;
+    --red: #f06060;
+    --amber: #f5a623;
+    --font: 'IBM Plex Sans', sans-serif;
+    --mono: 'IBM Plex Mono', monospace;
+    --radius: 6px;
+  }
+
+  body { font-family: var(--font); background: var(--bg); color: var(--text); min-height: 100vh; display: flex; font-size: 14px; }
+
+  /* Sidebar */
+  #sidebar {
+    width: 200px; min-height: 100vh; background: var(--bg2);
+    border-right: 1px solid var(--border); display: flex; flex-direction: column;
+    position: fixed; top: 0; left: 0; bottom: 0; z-index: 10;
+  }
+  .logo { padding: 20px 16px 16px; border-bottom: 1px solid var(--border); }
+  .logo span { font-family: var(--mono); font-size: 13px; color: var(--accent); letter-spacing: 0.05em; }
+  .logo small { display: block; color: var(--text3); font-size: 11px; margin-top: 2px; }
+
+  nav { flex: 1; padding: 8px 0; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 16px; cursor: pointer; color: var(--text2);
+    font-size: 13px; border-left: 2px solid transparent;
+    transition: all 0.15s;
+  }
+  .nav-item:hover { background: var(--bg3); color: var(--text); }
+  .nav-item.active { background: rgba(91,141,239,0.08); color: var(--accent); border-left-color: var(--accent); }
+  .nav-icon { width: 16px; height: 16px; opacity: 0.7; flex-shrink: 0; }
+  .nav-item.active .nav-icon { opacity: 1; }
+
+  .sidebar-footer { padding: 12px 16px; border-top: 1px solid var(--border); }
+  .user-badge { display: flex; align-items: center; gap: 8px; }
+  .avatar { width: 28px; height: 28px; border-radius: 50%; background: var(--accent2); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 500; color: #fff; flex-shrink: 0; }
+  .user-info { flex: 1; min-width: 0; }
+  .user-info strong { display: block; font-size: 12px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .user-info span { font-size: 11px; color: var(--text3); }
+  .logout-btn { background: none; border: none; color: var(--text3); cursor: pointer; padding: 4px; border-radius: 4px; }
+  .logout-btn:hover { color: var(--red); }
+
+  /* Main */
+  #main { margin-left: 200px; flex: 1; display: flex; flex-direction: column; min-height: 100vh; }
+
+    .topbar-inner { max-width: 1100px; width: 100%; margin: 0 auto; display: flex; align-items: center; gap: 12px; height: 100%; }
+  .topbar {
+    height: 52px; border-bottom: 1px solid var(--border);
+    background: var(--bg2); position: sticky; top: 0; z-index: 5; padding: 0 24px;
+  }
+  .topbar h1 { font-size: 15px; font-weight: 500; flex: 1; }
+  .api-badge { font-family: var(--mono); font-size: 11px; color: var(--text3); background: var(--bg3); padding: 3px 8px; border-radius: 4px; border: 1px solid var(--border); }
+
+  .content { padding: 24px; flex: 1; max-width: 1100px; width: 100%; margin: 0 auto; }
+
+  /* Login */
+  #login-page {
+    display: flex; align-items: center; justify-content: center;
+    min-height: 100vh; width: 100%; background: var(--bg); position: fixed; inset: 0; z-index: 50;
+  }
+  .login-box {
+    width: 360px; background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 32px;
+  }
+  .login-box h2 { font-family: var(--mono); font-size: 18px; color: var(--accent); margin-bottom: 4px; }
+  .login-box p { color: var(--text3); font-size: 13px; margin-bottom: 28px; }
+
+  /* Forms */
+  .form-group { margin-bottom: 16px; }
+  label { display: block; font-size: 12px; color: var(--text2); margin-bottom: 6px; font-weight: 500; letter-spacing: 0.03em; }
+  input[type=text], input[type=password], input[type=email], select, textarea {
+    width: 100%; background: var(--bg3); border: 1px solid var(--border2);
+    color: var(--text); border-radius: var(--radius); padding: 8px 12px;
+    font-family: var(--font); font-size: 13px; outline: none;
+    transition: border-color 0.15s;
+  }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+  select option { background: var(--bg3); }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 14px; border-radius: var(--radius); font-size: 13px;
+    font-family: var(--font); font-weight: 500; cursor: pointer;
+    border: 1px solid transparent; transition: all 0.15s; white-space: nowrap;
+  }
+  .btn-primary { background: var(--accent); color: #fff; border-color: var(--accent2); }
+  .btn-primary:hover { background: var(--accent2); }
+  .btn-ghost { background: transparent; color: var(--text2); border-color: var(--border2); }
+  .btn-ghost:hover { background: var(--bg3); color: var(--text); }
+  .btn-danger { background: transparent; color: var(--red); border-color: rgba(240,96,96,0.3); }
+  .btn-danger:hover { background: rgba(240,96,96,0.1); }
+  .btn-sm { padding: 5px 10px; font-size: 12px; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-full { width: 100%; justify-content: center; }
+
+  /* Table */
+  .table-wrap { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  table { width: 100%; border-collapse: collapse; }
+  thead { background: var(--bg3); }
+  th { padding: 10px 16px; text-align: left; font-size: 11px; font-weight: 500; color: var(--text3); letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; }
+  td { padding: 12px 16px; border-top: 1px solid var(--border); font-size: 13px; vertical-align: middle; }
+  tr:hover td { background: rgba(255,255,255,0.02); }
+  .empty-row td { text-align: center; color: var(--text3); padding: 40px; font-size: 13px; }
+
+  /* Badges */
+  .badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; }
+  .badge-green { background: rgba(62,207,142,0.12); color: var(--green); }
+  .badge-red { background: rgba(240,96,96,0.12); color: var(--red); }
+  .badge-amber { background: rgba(245,166,35,0.12); color: var(--amber); }
+  .badge-blue { background: rgba(91,141,239,0.12); color: var(--accent); }
+  .badge-gray { background: var(--bg3); color: var(--text3); }
+
+  /* Toolbar */
+  .toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+  .toolbar-right { margin-left: auto; display: flex; gap: 8px; }
+  .search-wrap { position: relative; }
+  .search-wrap input { padding-left: 30px; width: 220px; }
+  .search-icon { position: absolute; left: 9px; top: 50%; transform: translateY(-50%); color: var(--text3); pointer-events: none; }
+
+  /* Modal */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+    display: flex; align-items: center; justify-content: center; z-index: 100;
+  }
+  .modal { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; width: 420px; max-width: 95vw; }
+  .modal-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+  .modal-header h3 { font-size: 14px; font-weight: 500; }
+  .modal-body { padding: 20px; }
+  .modal-footer { padding: 14px 20px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 8px; }
+  .close-btn { background: none; border: none; color: var(--text3); cursor: pointer; font-size: 18px; line-height: 1; padding: 2px 6px; border-radius: 4px; }
+  .close-btn:hover { color: var(--text); background: var(--bg3); }
+
+  /* Alert */
+  .alert { padding: 10px 14px; border-radius: var(--radius); font-size: 13px; margin-bottom: 16px; }
+  .alert-error { background: rgba(240,96,96,0.1); border: 1px solid rgba(240,96,96,0.25); color: #f09090; }
+  .alert-success { background: rgba(62,207,142,0.1); border: 1px solid rgba(62,207,142,0.25); color: var(--green); }
+
+  /* Stats row */
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
+  .stat-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+  .stat-label { font-size: 11px; color: var(--text3); letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 6px; }
+  .stat-value { font-family: var(--mono); font-size: 24px; font-weight: 500; }
+  .stat-sub { font-size: 11px; color: var(--text3); margin-top: 4px; }
+
+  /* Token display */
+  .token-cell { font-family: var(--mono); font-size: 12px; color: var(--text2); max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* Section tabs */
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* Roles list */
+  .roles-wrap { display: flex; flex-wrap: wrap; gap: 4px; }
+
+  /* Log entry */
+  .log-action { font-family: var(--mono); font-size: 12px; }
+
+  /* Spinner */
+  .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.2); border-top-color: #fff; border-radius: 50%; animation: spin 0.6s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Misc */
+  .mono { font-family: var(--mono); font-size: 12px; }
+  .text-muted { color: var(--text2); }
+  .mt-2 { margin-top: 8px; }
+  .flex { display: flex; }
+  .gap-2 { gap: 8px; }
+  .items-center { align-items: center; }
+
+  @media (max-width: 900px) {
+    .stats { grid-template-columns: repeat(2, 1fr); }
+    #sidebar { width: 160px; }
+    #main { margin-left: 160px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Login -->
+<div id="login-page">
+  <div class="login-box">
+    <h2>usermgr</h2>
+    <p>管理后台，请先登录</p>
+    <div id="login-alert"></div>
+    <div class="form-group">
+      <label>用户名</label>
+      <input type="text" id="login-username" placeholder="admin" autocomplete="username">
+    </div>
+    <div class="form-group">
+      <label>密码</label>
+      <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <div class="form-group">
+      <label>API 地址</label>
+      <input type="text" id="login-api" value="http://localhost:8080" placeholder="http://localhost:8080">
+    </div>
+    <button class="btn btn-primary btn-full" id="login-btn" onclick="doLogin()">登录</button>
+  </div>
+</div>
+
+<!-- App -->
+<div id="app" style="display:none; width:100%; display:none;">
+  <div id="sidebar">
+    <div class="logo">
+      <span>usermgr</span>
+      <small>admin console</small>
+    </div>
+    <nav>
+      <div class="nav-item active" onclick="showPage('users')" id="nav-users">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="8" cy="5" r="3"/><path d="M2 14c0-3.3 2.7-5 6-5s6 1.7 6 5"/>
+        </svg>
+        用户管理
+      </div>
+      <div class="nav-item" onclick="showPage('tokens')" id="nav-tokens">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+          <rect x="2" y="6" width="12" height="8" rx="2"/><path d="M5 6V4a3 3 0 016 0v2"/>
+        </svg>
+        Token 管理
+      </div>
+      <div class="nav-item" onclick="showPage('audit')" id="nav-audit">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M3 4h10M3 8h7M3 12h5"/>
+        </svg>
+        审计日志
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-badge">
+        <div class="avatar" id="sidebar-avatar">?</div>
+        <div class="user-info">
+          <strong id="sidebar-username">-</strong>
+          <span>已登录</span>
+        </div>
+        <button class="logout-btn" onclick="doLogout()" title="退出登录">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M6 2H3a1 1 0 00-1 1v10a1 1 0 001 1h3M10 11l3-3-3-3M13 8H6"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="main">
+    <!-- Users Page -->
+    <div id="page-users" class="page active">
+      <div class="topbar"><div class="topbar-inner">
+        <h1>用户管理</h1>
+        <span class="api-badge" id="api-url-badge">-</span>
+      </div></div>
+      <div class="content">
+        <div class="stats" id="user-stats">
+          <div class="stat-card"><div class="stat-label">总用户</div><div class="stat-value" id="stat-total">-</div></div>
+          <div class="stat-card"><div class="stat-label">管理员</div><div class="stat-value" id="stat-admin">-</div></div>
+          <div class="stat-card"><div class="stat-label">普通用户</div><div class="stat-value" id="stat-user">-</div></div>
+          <div class="stat-card"><div class="stat-label">健康检查</div><div class="stat-value" id="stat-health" style="font-size:14px">-</div></div>
+        </div>
+        <div class="toolbar">
+          <div class="search-wrap">
+            <svg class="search-icon" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7" cy="7" r="4"/><path d="M10 10l3 3"/></svg>
+            <input type="text" id="user-search" placeholder="搜索用户名 / 邮箱…" oninput="filterUsers()">
+          </div>
+          <div class="toolbar-right">
+            <button class="btn btn-ghost btn-sm" onclick="loadUsers()">刷新</button>
+            <button class="btn btn-primary btn-sm" onclick="openCreateUser()">+ 新建用户</button>
+          </div>
+        </div>
+        <div id="users-alert"></div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>ID</th><th>用户名</th><th>邮箱</th><th>角色</th><th>创建时间</th><th>操作</th></tr>
+            </thead>
+            <tbody id="users-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tokens Page -->
+    <div id="page-tokens" class="page">
+      <div class="topbar"><div class="topbar-inner">
+        <h1>Token 管理</h1>
+        <span class="api-badge" id="api-url-badge2">-</span>
+      </div></div>
+      <div class="content">
+        <div class="toolbar">
+          <div class="toolbar-right">
+            <button class="btn btn-ghost btn-sm" onclick="loadTokens()">刷新</button>
+          </div>
+        </div>
+        <div id="tokens-alert"></div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>ID</th><th>Token (前缀)</th><th>创建时间</th><th>过期时间</th><th>状态</th><th>操作</th></tr>
+            </thead>
+            <tbody id="tokens-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Audit Page -->
+    <div id="page-audit" class="page">
+      <div class="topbar"><div class="topbar-inner">
+        <h1>审计日志</h1>
+        <span class="api-badge" id="api-url-badge3">-</span>
+      </div></div>
+      <div class="content">
+        <div class="toolbar">
+          <div class="toolbar-right">
+            <button class="btn btn-ghost btn-sm" onclick="loadAudit()">刷新</button>
+          </div>
+        </div>
+        <div id="audit-alert"></div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>时间</th><th>操作者</th><th>动作</th><th>目标</th><th>IP</th><th>结果</th></tr>
+            </thead>
+            <tbody id="audit-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Create/Edit User -->
+<div class="modal-overlay" id="modal-user" style="display:none">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modal-user-title">新建用户</h3>
+      <button class="close-btn" onclick="closeModal('modal-user')">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="modal-user-alert"></div>
+      <input type="hidden" id="edit-user-id">
+      <div class="form-group">
+        <label>用户名</label>
+        <input type="text" id="edit-username" placeholder="username">
+      </div>
+      <div class="form-group">
+        <label>邮箱</label>
+        <input type="email" id="edit-email" placeholder="user@example.com">
+      </div>
+      <div class="form-group" id="edit-password-group">
+        <label>密码</label>
+        <input type="password" id="edit-password" placeholder="至少 8 位">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-user')">取消</button>
+      <button class="btn btn-primary" id="modal-user-submit" onclick="submitUser()">创建</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Change Password -->
+<div class="modal-overlay" id="modal-password" style="display:none">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>修改密码</h3>
+      <button class="close-btn" onclick="closeModal('modal-password')">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="modal-password-alert"></div>
+      <input type="hidden" id="chpw-user-id">
+      <div class="form-group">
+        <label>新密码</label>
+        <input type="password" id="chpw-new" placeholder="至少 8 位">
+      </div>
+      <div class="form-group">
+        <label>确认密码</label>
+        <input type="password" id="chpw-confirm" placeholder="再次输入">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-password')">取消</button>
+      <button class="btn btn-primary" onclick="submitChangePassword()">确认修改</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Assign Role -->
+<div class="modal-overlay" id="modal-role" style="display:none">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modal-role-title">分配角色</h3>
+      <button class="close-btn" onclick="closeModal('modal-role')">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="modal-role-alert"></div>
+      <input type="hidden" id="role-user-id">
+      <div class="form-group">
+        <label>当前角色</label>
+        <div id="role-current" class="roles-wrap mt-2"></div>
+      </div>
+      <div class="form-group">
+        <label>添加角色</label>
+        <div style="display:flex;gap:8px">
+          <input type="text" id="role-input" placeholder="admin / editor / viewer …" style="flex:1">
+          <button class="btn btn-primary btn-sm" onclick="assignRole()">添加</button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-role')">关闭</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let API = '';
+let TOKEN = '';
+let CURRENT_USER = '';
+let allUsers = [];
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+async function api(method, path, body) {
+  const opts = { method, headers: { 'Content-Type': 'application/json' } };
+  if (TOKEN) opts.headers['Authorization'] = 'Bearer ' + TOKEN;
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch(API + path, opts);
+  let data;
+  try { data = await r.json(); } catch { data = {}; }
+  return { ok: r.ok, status: r.status, data };
+}
+
+function fmtTime(s) {
+  if (!s) return '-';
+  return new Date(s).toLocaleString('zh-CN', { hour12: false });
+}
+
+function showAlert(id, msg, type = 'error') {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.innerHTML = msg ? `<div class="alert alert-${type}">${msg}</div>` : '';
+}
+
+function closeModal(id) {
+  document.getElementById(id).style.display = 'none';
+}
+
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  document.getElementById('nav-' + name).classList.add('active');
+  if (name === 'users') loadUsers();
+  if (name === 'tokens') loadTokens();
+  if (name === 'audit') loadAudit();
+}
+
+// ── Login / Logout ────────────────────────────────────────────────────────────
+async function doLogin() {
+  const username = document.getElementById('login-username').value.trim();
+  const password = document.getElementById('login-password').value;
+  API = document.getElementById('login-api').value.trim().replace(/\/$/, '');
+  if (!username || !password) return showAlert('login-alert', '请输入用户名和密码');
+  const btn = document.getElementById('login-btn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> 登录中…';
+  try {
+    const r = await api('POST', '/auth/login', { username, password });
+    if (!r.ok) {
+      showAlert('login-alert', r.data.error || r.data.message || '登录失败，请检查用户名密码');
+    } else {
+      TOKEN = r.data.token;
+      CURRENT_USER = username;
+      document.getElementById('login-page').style.display = 'none';
+      document.getElementById('app').style.display = 'flex';
+      document.getElementById('sidebar-username').textContent = username;
+      document.getElementById('sidebar-avatar').textContent = username[0].toUpperCase();
+      document.getElementById('api-url-badge').textContent = API;
+      document.getElementById('api-url-badge2').textContent = API;
+      document.getElementById('api-url-badge3').textContent = API;
+      loadUsers(); checkHealth();
+    }
+  } catch(e) {
+    showAlert('login-alert', '无法连接到 API：' + e.message);
+  }
+  btn.disabled = false; btn.textContent = '登录';
+}
+
+async function doLogout() {
+  await api('POST', '/auth/logout');
+  TOKEN = ''; CURRENT_USER = ''; API = '';
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-page').style.display = 'flex';
+  document.getElementById('login-password').value = '';
+}
+
+document.getElementById('login-password').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doLogin();
+});
+
+// ── Health ────────────────────────────────────────────────────────────────────
+async function checkHealth() {
+  try {
+    const r = await fetch(API + '/health');
+    const el = document.getElementById('stat-health');
+    if (r.ok) { el.textContent = '正常'; el.style.color = 'var(--green)'; }
+    else { el.textContent = '异常'; el.style.color = 'var(--red)'; }
+  } catch { document.getElementById('stat-health').textContent = '离线'; }
+}
+
+// ── Users ─────────────────────────────────────────────────────────────────────
+async function loadUsers() {
+  const r = await api('GET', '/users');
+  if (!r.ok) { showAlert('users-alert', '加载失败: ' + (r.data.error || r.status)); return; }
+  allUsers = Array.isArray(r.data) ? r.data : (r.data.users || r.data.data || []);
+  renderUsers(allUsers);
+  updateStats(allUsers);
+}
+
+function updateStats(users) {
+  document.getElementById('stat-total').textContent = users.length;
+  document.getElementById('stat-admin').textContent = users.filter(u => u.roles && u.roles.includes('admin')).length;
+  document.getElementById('stat-user').textContent = users.filter(u => !u.roles || !u.roles.includes('admin')).length;
+}
+
+function filterUsers() {
+  const q = document.getElementById('user-search').value.toLowerCase();
+  const filtered = allUsers.filter(u =>
+    (u.username || '').toLowerCase().includes(q) || (u.email || '').toLowerCase().includes(q)
+  );
+  renderUsers(filtered);
+}
+
+function renderUsers(users) {
+  const tbody = document.getElementById('users-tbody');
+  if (!users.length) {
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="6">暂无用户数据</td></tr>';
+    return;
+  }
+  tbody.innerHTML = users.map(u => {
+    const roles = (u.roles || []).map(r =>
+      `<span class="badge ${r === 'admin' ? 'badge-amber' : 'badge-blue'}">${r}</span>`
+    ).join(' ') || '<span class="badge badge-gray">无角色</span>';
+    return `<tr>
+      <td class="mono" style="color:var(--text3)">${u.id || '-'}</td>
+      <td><strong>${u.username || '-'}</strong></td>
+      <td style="color:var(--text2)">${u.email || '-'}</td>
+      <td><div class="roles-wrap">${roles}</div></td>
+      <td style="color:var(--text3);font-size:12px">${fmtTime(u.created_at)}</td>
+      <td>
+        <div class="flex gap-2 items-center">
+          <button class="btn btn-ghost btn-sm" onclick="openEditUser(${JSON.stringify(u).replace(/"/g,'&quot;')})">编辑</button>
+          <button class="btn btn-ghost btn-sm" onclick="openChangePassword('${u.id}')">改密</button>
+          <button class="btn btn-ghost btn-sm" onclick="openRoles('${u.id}','${u.username}',${JSON.stringify(u.roles||[]).replace(/"/g,'&quot;')})">角色</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteUser('${u.id}','${u.username}')">删除</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function openCreateUser() {
+  document.getElementById('modal-user-title').textContent = '新建用户';
+  document.getElementById('edit-user-id').value = '';
+  document.getElementById('edit-username').value = '';
+  document.getElementById('edit-email').value = '';
+  document.getElementById('edit-password').value = '';
+  document.getElementById('edit-password-group').style.display = '';
+  document.getElementById('modal-user-submit').textContent = '创建';
+  showAlert('modal-user-alert', '');
+  document.getElementById('modal-user').style.display = 'flex';
+}
+
+function openEditUser(u) {
+  document.getElementById('modal-user-title').textContent = '编辑用户';
+  document.getElementById('edit-user-id').value = u.id;
+  document.getElementById('edit-username').value = u.username || '';
+  document.getElementById('edit-email').value = u.email || '';
+  document.getElementById('edit-password-group').style.display = 'none';
+  document.getElementById('modal-user-submit').textContent = '保存';
+  showAlert('modal-user-alert', '');
+  document.getElementById('modal-user').style.display = 'flex';
+}
+
+async function submitUser() {
+  const id = document.getElementById('edit-user-id').value;
+  const username = document.getElementById('edit-username').value.trim();
+  const email = document.getElementById('edit-email').value.trim();
+  const password = document.getElementById('edit-password').value;
+  if (!username) return showAlert('modal-user-alert', '用户名不能为空');
+  let r;
+  if (id) {
+    r = await api('PATCH', '/users/' + id, { username, email });
+  } else {
+    if (!password) return showAlert('modal-user-alert', '请输入密码');
+    r = await api('POST', '/users', { username, email, password });
+  }
+  if (!r.ok) return showAlert('modal-user-alert', r.data.error || r.data.message || '操作失败');
+  closeModal('modal-user');
+  loadUsers();
+}
+
+async function deleteUser(id, name) {
+  if (!confirm(`确定删除用户 "${name}"？此操作不可撤销。`)) return;
+  const r = await api('DELETE', '/users/' + id);
+  if (!r.ok) return showAlert('users-alert', '删除失败: ' + (r.data.error || r.status));
+  showAlert('users-alert', `用户 "${name}" 已删除`, 'success');
+  loadUsers();
+}
+
+function openChangePassword(id) {
+  document.getElementById('chpw-user-id').value = id;
+  document.getElementById('chpw-new').value = '';
+  document.getElementById('chpw-confirm').value = '';
+  showAlert('modal-password-alert', '');
+  document.getElementById('modal-password').style.display = 'flex';
+}
+
+async function submitChangePassword() {
+  const id = document.getElementById('chpw-user-id').value;
+  const np = document.getElementById('chpw-new').value;
+  const cp = document.getElementById('chpw-confirm').value;
+  if (!np) return showAlert('modal-password-alert', '请输入新密码');
+  if (np !== cp) return showAlert('modal-password-alert', '两次密码不一致');
+  const r = await api('PATCH', '/users/' + id + '/password', { new_password: np });
+  if (!r.ok) return showAlert('modal-password-alert', r.data.error || '修改失败');
+  closeModal('modal-password');
+  showAlert('users-alert', '密码已修改', 'success');
+}
+
+let roleUserId = null;
+let roleUserRoles = [];
+
+function openRoles(id, name, roles) {
+  roleUserId = id;
+  roleUserRoles = roles || [];
+  document.getElementById('modal-role-title').textContent = `角色管理 — ${name}`;
+  document.getElementById('role-user-id').value = id;
+  document.getElementById('role-input').value = '';
+  showAlert('modal-role-alert', '');
+  renderRoleBadges();
+  document.getElementById('modal-role').style.display = 'flex';
+}
+
+function renderRoleBadges() {
+  const wrap = document.getElementById('role-current');
+  wrap.innerHTML = roleUserRoles.length
+    ? roleUserRoles.map(r =>
+        `<span class="badge ${r==='admin'?'badge-amber':'badge-blue'}" style="cursor:pointer" title="点击移除" onclick="removeRole('${r}')">${r} ×</span>`
+      ).join('')
+    : '<span style="color:var(--text3);font-size:12px">暂无角色</span>';
+}
+
+async function assignRole() {
+  const role = document.getElementById('role-input').value.trim();
+  if (!role) return;
+  const r = await api('POST', '/users/' + roleUserId + '/roles', { role });
+  if (!r.ok) return showAlert('modal-role-alert', r.data.error || '添加失败');
+  if (!roleUserRoles.includes(role)) roleUserRoles.push(role);
+  document.getElementById('role-input').value = '';
+  renderRoleBadges(); loadUsers();
+}
+
+async function removeRole(role) {
+  const r = await api('DELETE', '/users/' + roleUserId + '/roles/' + role);
+  if (!r.ok) return showAlert('modal-role-alert', r.data.error || '移除失败');
+  roleUserRoles = roleUserRoles.filter(x => x !== role);
+  renderRoleBadges(); loadUsers();
+}
+
+// ── Tokens ────────────────────────────────────────────────────────────────────
+async function loadTokens() {
+  const r = await api('GET', '/auth/tokens');
+  if (!r.ok) { showAlert('tokens-alert', '加载失败: ' + (r.data.error || r.status)); return; }
+  const tokens = Array.isArray(r.data) ? r.data : (r.data.tokens || r.data.data || []);
+  const tbody = document.getElementById('tokens-tbody');
+  if (!tokens.length) {
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="6">暂无 Token</td></tr>'; return;
+  }
+  tbody.innerHTML = tokens.map(t => {
+    const prefix = t.token ? t.token.substring(0, 16) + '…' : (t.id || '-');
+    const expired = t.expires_at && new Date(t.expires_at) < new Date();
+    const status = expired
+      ? '<span class="badge badge-red">已过期</span>'
+      : '<span class="badge badge-green">有效</span>';
+    return `<tr>
+      <td class="mono" style="color:var(--text3)">${t.id || '-'}</td>
+      <td class="token-cell mono">${prefix}</td>
+      <td style="color:var(--text3);font-size:12px">${fmtTime(t.created_at)}</td>
+      <td style="color:var(--text3);font-size:12px">${t.expires_at ? fmtTime(t.expires_at) : '永不过期'}</td>
+      <td>${status}</td>
+      <td><button class="btn btn-danger btn-sm" onclick="revokeToken('${t.id}')">吊销</button></td>
+    </tr>`;
+  }).join('');
+}
+
+async function revokeToken(id) {
+  if (!confirm('确定吊销此 Token？')) return;
+  const r = await api('DELETE', '/auth/tokens/' + id);
+  if (!r.ok) return showAlert('tokens-alert', '吊销失败: ' + (r.data.error || r.status));
+  showAlert('tokens-alert', 'Token 已吊销', 'success');
+  loadTokens();
+}
+
+// ── Audit ─────────────────────────────────────────────────────────────────────
+async function loadAudit() {
+  const r = await api('GET', '/audit');
+  if (!r.ok) { showAlert('audit-alert', '加载失败: ' + (r.data.error || r.status)); return; }
+  const logs = Array.isArray(r.data) ? r.data : (r.data.logs || r.data.data || []);
+  const tbody = document.getElementById('audit-tbody');
+  if (!logs.length) {
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="6">暂无审计记录</td></tr>'; return;
+  }
+  tbody.innerHTML = logs.map(l => {
+    const ok = l.success !== false;
+    return `<tr>
+      <td style="color:var(--text3);font-size:12px;white-space:nowrap">${fmtTime(l.created_at || l.timestamp)}</td>
+      <td>${l.actor || l.username || '-'}</td>
+      <td><span class="log-action">${l.action || l.event || '-'}</span></td>
+      <td style="color:var(--text2)">${l.target || l.target_id || '-'}</td>
+      <td class="mono" style="color:var(--text3);font-size:12px">${l.ip || '-'}</td>
+      <td>${ok ? '<span class="badge badge-green">成功</span>' : '<span class="badge badge-red">失败</span>'}</td>
+    </tr>`;
+  }).join('');
+}
+
+// Close modal on overlay click
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.style.display = 'none'; });
+});
+</script>
+</body>
+</html>
