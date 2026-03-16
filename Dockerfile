@@ -2,7 +2,7 @@ FROM golang:1.23-alpine AS builder
 WORKDIR /app
 COPY go.mod go.sum ./
 ARG GOPROXY=https://goproxy.io,direct
-ENV GOPROXY=${GOPROXY
+ENV GOPROXY=${GOPROXY}
 RUN go mod download
 COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -o server ./cmd/server
