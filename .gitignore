@@ -1,0 +1,8 @@
+# 编译产物
+*.exe
+*.out
+/bin/
+/dist/
+
+# Go 工具链
+vendor/
