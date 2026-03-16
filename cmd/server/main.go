@@ -57,7 +57,7 @@ func main() {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
 
-	r.StaticFile("/admin", "./admin.html")
+	r.StaticFile("/admin", "/admin.html")
 
 	// Auth routes
 	authGroup := r.Group("/auth")
