@@ -53,24 +53,32 @@ jobs:
           build-args: |
             GOPROXY=https://goproxy.io,direct
       - name: Update ArgoCD Manifest
-        env:
-          # 关键：这里直接写死成获取 sha 并截取
-          NEW_TAG: sha-${{ github.sha }}
         run: |
-          # 在 shell 里直接处理成 7 位
+          # 1. 定义变量
           TAG_7=$(echo ${{ github.sha }} | cut -c1-7)
           FINAL_TAG="sha-${TAG_7}"
           
-          cd /home/ubuntu/argo
-          git pull origin main
+          # 2. 初始化 SSH (确保使用你挂载的 key)
+          mkdir -p ~/.ssh
+          cp /home/runner/.ssh-keys/argocd-repo-key ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
           
+          # 3. 配置 Git
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          # 强制 Git 使用特定的私钥
+          git config --global core.sshCommand "ssh -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes"
+
+          # 4. 在当前工作目录 Clone (不要写死 /home/ubuntu)
+          # 使用临时目录，避免残留
+          git clone git@github.com:jesse20250808/argo.git argo_dir
+          cd argo_dir
+          
+          # 5. 修改文件 (请检查你的路径是否正确)
           sed -i "s|image: ghcr.io/jesse20250808/usermgr:.*|image: ghcr.io/jesse20250808/usermgr:${FINAL_TAG}|g" services/usermgr/deployment.yaml
           
-          # 检查是否真的改了，避免 "nothing to commit" 报错
+          # 6. 提交并推送
           git add .
-          if ! git diff --cached --quiet; then
-            git config user.name "github-actions[bot]"
-            git config user.email "github-actions[bot]@users.noreply.github.com"
-            git commit -m "chore: update image to ${FINAL_TAG} [skip ci]"
-            git push origin main
-          fi
+          git commit -m "chore: update usermgr image to ${FINAL_TAG} [skip ci]"
+          git push origin main
