@@ -213,7 +213,7 @@
     </div>
     <div class="form-group">
       <label>API 地址</label>
-      <input type="text" id="login-api" value="http://localhost:8080" placeholder="http://localhost:8080">
+      <input type="text" id="login-api" value="" placeholder="留空则使用当前域名">
     </div>
     <button class="btn btn-primary btn-full" id="login-btn" onclick="doLogin()">登录</button>
   </div>
@@ -530,7 +530,7 @@ async function checkHealth() {
 async function loadUsers() {
   const r = await api('GET', '/users');
   if (!r.ok) { showAlert('users-alert', '加载失败: ' + (r.data.error || r.status)); return; }
-  allUsers = Array.isArray(r.data) ? r.data : (r.data.users || r.data.data || []);
+  allUsers = r.data?.data?.users || r.data?.users || (Array.isArray(r.data) ? r.data : []);
   renderUsers(allUsers);
   updateStats(allUsers);
 }
@@ -690,7 +690,7 @@ async function removeRole(role) {
 async function loadTokens() {
   const r = await api('GET', '/auth/tokens');
   if (!r.ok) { showAlert('tokens-alert', '加载失败: ' + (r.data.error || r.status)); return; }
-  const tokens = Array.isArray(r.data) ? r.data : (r.data.tokens || r.data.data || []);
+  const tokens = Array.isArray(r.data?.data) ? r.data.data : Array.isArray(r.data) ? r.data : [];
   const tbody = document.getElementById('tokens-tbody');
   if (!tokens.length) {
     tbody.innerHTML = '<tr class="empty-row"><td colspan="6">暂无 Token</td></tr>'; return;
@@ -724,20 +724,19 @@ async function revokeToken(id) {
 async function loadAudit() {
   const r = await api('GET', '/audit');
   if (!r.ok) { showAlert('audit-alert', '加载失败: ' + (r.data.error || r.status)); return; }
-  const logs = Array.isArray(r.data) ? r.data : (r.data.logs || r.data.data || []);
+  const logs = r.data?.data?.logs || r.data?.logs || (Array.isArray(r.data) ? r.data : []);
   const tbody = document.getElementById('audit-tbody');
   if (!logs.length) {
     tbody.innerHTML = '<tr class="empty-row"><td colspan="6">暂无审计记录</td></tr>'; return;
   }
   tbody.innerHTML = logs.map(l => {
-    const ok = l.success !== false;
     return `<tr>
-      <td style="color:var(--text3);font-size:12px;white-space:nowrap">${fmtTime(l.created_at || l.timestamp)}</td>
-      <td>${l.actor || l.username || '-'}</td>
-      <td><span class="log-action">${l.action || l.event || '-'}</span></td>
-      <td style="color:var(--text2)">${l.target || l.target_id || '-'}</td>
-      <td class="mono" style="color:var(--text3);font-size:12px">${l.ip || '-'}</td>
-      <td>${ok ? '<span class="badge badge-green">成功</span>' : '<span class="badge badge-red">失败</span>'}</td>
+      <td style="color:var(--text3);font-size:12px;white-space:nowrap">${fmtTime(l.created_at)}</td>
+      <td class="mono" style="font-size:12px">${l.user_id ? l.user_id.substring(0,8)+'…' : '-'}</td>
+      <td><span class="log-action">${l.action || '-'}</span></td>
+      <td style="color:var(--text2);font-size:12px">${l.resource || '-'}${l.resource_id ? ' / '+l.resource_id.substring(0,8)+'…' : ''}</td>
+      <td class="mono" style="color:var(--text3);font-size:12px">${l.ip_address || '-'}</td>
+      <td><span class="badge badge-green">成功</span></td>
     </tr>`;
   }).join('');
 }
