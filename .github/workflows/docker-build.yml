@@ -34,7 +34,7 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=sha,prefix=sha-
+            type=sha,prefix=sha-,format=short
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Set up Docker Buildx
@@ -55,7 +55,7 @@ jobs:
 
       - name: Update ArgoCD Manifest
         env:
-          NEW_TAG: sha-${{ github.sha }}
+          NEW_TAG: ${{ steps.meta.outputs.version }}
         run: |
           # 1. 进入本地已经存在的 argo 目录
           cd /home/ubuntu/argo
