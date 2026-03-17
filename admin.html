@@ -488,15 +488,17 @@ async function doLogin() {
       showAlert('login-alert', r.data.error || r.data.message || '登录失败，请检查用户名密码');
     } else {
       TOKEN = r.data.data.token;
+      const currentTokenId = r.data.data.token_info?.id;
       CURRENT_USER = username;
       document.getElementById('login-page').style.display = 'none';
       document.getElementById('app').style.display = 'flex';
       document.getElementById('sidebar-username').textContent = username;
       document.getElementById('sidebar-avatar').textContent = username[0].toUpperCase();
-      document.getElementById('api-url-badge').textContent = API;
-      document.getElementById('api-url-badge2').textContent = API;
-      document.getElementById('api-url-badge3').textContent = API;
+      document.getElementById('api-url-badge').textContent = API || location.host;
+      document.getElementById('api-url-badge2').textContent = API || location.host;
+      document.getElementById('api-url-badge3').textContent = API || location.host;
       loadUsers(); checkHealth();
+      cleanOldTokens(currentTokenId);
     }
   } catch(e) {
     showAlert('login-alert', '无法连接到 API：' + e.message);
@@ -515,6 +517,20 @@ async function doLogout() {
 document.getElementById('login-password').addEventListener('keydown', e => {
   if (e.key === 'Enter') doLogin();
 });
+
+async function cleanOldTokens(currentTokenId) {
+  if (!currentTokenId) return;
+  try {
+    const r = await api('GET', '/auth/tokens');
+    const tokens = Array.isArray(r.data?.data) ? r.data.data : [];
+    const old = tokens.filter(t => t.id !== currentTokenId);
+    if (!old.length) return;
+    await Promise.all(old.map(t => api('DELETE', '/auth/tokens/' + t.id)));
+    console.log(`已清理 ${old.length} 个旧 token`);
+  } catch(e) {
+    console.warn('清理旧 token 失败:', e);
+  }
+}
 
 // ── Health ────────────────────────────────────────────────────────────────────
 async function checkHealth() {
