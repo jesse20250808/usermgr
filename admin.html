@@ -490,6 +490,9 @@ async function doLogin() {
       TOKEN = r.data.data.token;
       const currentTokenId = r.data.data.token_info?.id;
       CURRENT_USER = username;
+      localStorage.setItem('usermgr_token', TOKEN);
+      localStorage.setItem('usermgr_api', API);
+      localStorage.setItem('usermgr_user', username);
       document.getElementById('login-page').style.display = 'none';
       document.getElementById('app').style.display = 'flex';
       document.getElementById('sidebar-username').textContent = username;
@@ -509,6 +512,9 @@ async function doLogin() {
 async function doLogout() {
   await api('POST', '/auth/logout');
   TOKEN = ''; CURRENT_USER = ''; API = '';
+  localStorage.removeItem('usermgr_token');
+  localStorage.removeItem('usermgr_api');
+  localStorage.removeItem('usermgr_user');
   document.getElementById('app').style.display = 'none';
   document.getElementById('login-page').style.display = 'flex';
   document.getElementById('login-password').value = '';
@@ -761,6 +767,36 @@ async function loadAudit() {
 document.querySelectorAll('.modal-overlay').forEach(overlay => {
   overlay.addEventListener('click', e => { if (e.target === overlay) overlay.style.display = 'none'; });
 });
+
+// Auto restore session on page load
+(async function restoreSession() {
+  const savedToken = localStorage.getItem('usermgr_token');
+  const savedApi   = localStorage.getItem('usermgr_api');
+  const savedUser  = localStorage.getItem('usermgr_user');
+  if (!savedToken) return;
+  TOKEN = savedToken;
+  API   = savedApi || '';
+  CURRENT_USER = savedUser || '';
+  // Verify token is still valid
+  const r = await api('GET', '/users');
+  if (!r.ok) {
+    localStorage.removeItem('usermgr_token');
+    localStorage.removeItem('usermgr_api');
+    localStorage.removeItem('usermgr_user');
+    return;
+  }
+  document.getElementById('login-page').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  document.getElementById('sidebar-username').textContent = CURRENT_USER;
+  document.getElementById('sidebar-avatar').textContent = CURRENT_USER ? CURRENT_USER[0].toUpperCase() : '?';
+  document.getElementById('api-url-badge').textContent  = API || location.host;
+  document.getElementById('api-url-badge2').textContent = API || location.host;
+  document.getElementById('api-url-badge3').textContent = API || location.host;
+  allUsers = r.data?.data?.users || [];
+  renderUsers(allUsers);
+  updateStats(allUsers);
+  checkHealth();
+})();
 </script>
 </body>
 </html>
