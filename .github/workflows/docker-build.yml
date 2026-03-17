@@ -55,7 +55,7 @@ jobs:
 
       - name: Update ArgoCD Manifest
         env:
-          NEW_TAG: ${{ steps.meta.outputs.version }}
+          NEW_TAG: sha-${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           # 1. 进入本地已经存在的 argo 目录
           cd /home/ubuntu/argo
