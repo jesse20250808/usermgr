@@ -52,26 +52,25 @@ jobs:
           cache-to: type=gha,mode=max
           build-args: |
             GOPROXY=https://goproxy.io,direct
-
       - name: Update ArgoCD Manifest
         env:
-          NEW_TAG: sha-${{ github.event.pull_request.head.sha || github.sha }}
+          # 关键：这里直接写死成获取 sha 并截取
+          NEW_TAG: sha-${{ github.sha }}
         run: |
-          # 1. 进入本地已经存在的 argo 目录
-          cd /home/ubuntu/argo
+          # 在 shell 里直接处理成 7 位
+          TAG_7=$(echo ${{ github.sha }} | cut -c1-7)
+          FINAL_TAG="sha-${TAG_7}"
           
-          # 2. 拉取最新代码并修改（直接使用环境变量）
+          cd /home/ubuntu/argo
           git pull origin main
           
-          # 3. 简单的 sed 替换
-          # 匹配 image 这一行并替换为新的 tag
-          sed -i "s|image: ghcr.io/jesse20250808/usermgr:.*|image: ghcr.io/jesse20250808/usermgr:${NEW_TAG}|g" services/usermgr/deployment.yaml
+          sed -i "s|image: ghcr.io/jesse20250808/usermgr:.*|image: ghcr.io/jesse20250808/usermgr:${FINAL_TAG}|g" services/usermgr/deployment.yaml
           
-          # 4. 只有在有变动时才 push
-          if ! git diff --quiet; then
+          # 检查是否真的改了，避免 "nothing to commit" 报错
+          git add .
+          if ! git diff --cached --quiet; then
             git config user.name "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
-            git add .
-            git commit -m "chore: update image to ${NEW_TAG} [skip ci]"
+            git commit -m "chore: update image to ${FINAL_TAG} [skip ci]"
             git push origin main
           fi
