@@ -52,3 +52,39 @@ jobs:
           cache-to: type=gha,mode=max
           build-args: |
             GOPROXY=https://goproxy.io,direct
+      - name: Update ArgoCD Manifest (Using local ubuntu SSH)
+        shell: bash
+        run: |
+          # 定义变量，获取刚才构建的具体 Tag
+          NEW_TAG="sha-${{ github.sha }}"
+          
+          # 使用 sudo -u ubuntu 确保使用 ubuntu 用户的 SSH 密钥和 Git 配置
+          sudo -u ubuntu bash <<EOF
+          # 1. 进入 ubuntu 的主目录工作区
+          cd /home/ubuntu
+          
+          # 2. 如果 argo 目录不存在则克隆，存在则拉取最新
+          if [ ! -d "argo" ]; then
+            git clone git@github.com:jesse20250808/argo.git
+          fi
+          cd argo
+          git fetch origin
+          git checkout main
+          git pull origin main
+          
+          # 3. 修改镜像 Tag (注意转义 $ 符号)
+          # 请根据你 argo.git 实际的文件路径修改下面的路径
+          sed -i "s|image: ghcr.io/jesse20250808/usermgr:.*|image: ghcr.io/jesse20250808/usermgr:\${NEW_TAG}|g" services/usermgr/deployment.yaml
+          
+          # 4. 提交并推送
+          # 检查是否有改动，防止无意义的 commit
+          if git diff --quiet; then
+            echo "No changes to commit"
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add .
+            git commit -m "chore: update usermgr image to \${NEW_TAG} [skip ci]"
+            git push origin main
+          fi
+          EOF
