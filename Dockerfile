@@ -6,11 +6,9 @@ ENV GOPROXY=$GOPROXY
 RUN go mod download
 COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -o server ./cmd/server
-RUN CGO_ENABLED=0 GOOS=linux go build -o seed ./cmd/seed
 
 FROM gcr.io/distroless/static-debian12
 COPY --from=builder /app/server /server
-COPY --from=builder /app/seed /server
 COPY admin.html /admin.html
 EXPOSE 8080
 ENTRYPOINT ["/server"]
